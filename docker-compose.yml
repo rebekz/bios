@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for Synapse
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: synapse
+      POSTGRES_USER: synapse
+      POSTGRES_PASSWORD: synapse_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - matrix_network
+    restart: unless-stopped
+
+  # Matrix Synapse homeserver
+  synapse:
+    build:
+      context: ./synapse
+      dockerfile: Dockerfile
+    ports:
+      - "8008:8008"
+      - "8448:8448"
+    volumes:
+      - ./synapse/data:/data
+      - ./synapse/config:/config
+    environment:
+      - SYNAPSE_SERVER_NAME=localhost
+      - SYNAPSE_REPORT_STATS=no
+    depends_on:
+      - postgres
+    networks:
+      - matrix_network
+    restart: unless-stopped
+
+  # Web client (React)
+  web-client:
+    build:
+      context: ./web-client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_MATRIX_SERVER_URL=http://localhost:8008
+    depends_on:
+      - synapse
+    networks:
+      - matrix_network
+    restart: unless-stopped
+
+  # AI Bot
+  ai-bot:
+    build:
+      context: ./ai-bot
+      dockerfile: Dockerfile
+    environment:
+      - MATRIX_SERVER_URL=http://synapse:8008
+      - MATRIX_USERNAME=@aibot:localhost
+      - MATRIX_PASSWORD=aibot_password
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    depends_on:
+      - synapse
+    networks:
+      - matrix_network
+    restart: unless-stopped
+    volumes:
+      - ./ai-bot/config:/app/config
+
+  # Redis for caching (optional but recommended)
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - matrix_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  matrix_network:
+    driver: bridge
