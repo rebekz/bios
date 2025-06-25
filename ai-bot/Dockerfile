@@ -3,17 +3,27 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies and uv
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    && rm -rf /var/lib/apt/lists/*
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && . $HOME/.cargo/env
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Add uv to PATH
+ENV PATH="/root/.cargo/bin:$PATH"
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy dependency files first for better caching
+COPY pyproject.toml uv.lock* requirements.txt ./
+
+# Install Python dependencies using uv (prefer pyproject.toml)
+RUN if [ -f pyproject.toml ]; then \
+        uv pip install --system --no-cache .; \
+    else \
+        uv pip install --system --no-cache -r requirements.txt; \
+    fi
 
 # Copy application code
 COPY . .

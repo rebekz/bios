@@ -12,15 +12,28 @@ An intelligent AI bot powered by Large Language Models (LLM) that integrates sea
 - **Configurable Personality**: Customizable bot personality and behavior
 - **Rate Limiting**: Built-in rate limiting and error handling
 - **Health Monitoring**: Health check endpoints for monitoring
+- **Fast Dependencies**: Uses uv for 10-100x faster package installation
+- **Modern Python**: Built with pyproject.toml for better dependency management
 
 ## Technology Stack
 
 - **Python 3.11**: Modern Python with async/await support
+- **uv**: Fast Python package installer and resolver
 - **matrix-nio**: Async Matrix client library
 - **OpenAI API**: GPT-3.5-turbo integration
 - **Anthropic API**: Claude integration
 - **Flask**: Web framework for application service endpoints
 - **Docker**: Containerized deployment
+
+### Why uv?
+
+We use [uv](https://astral.sh/uv/) as our package manager for several key advantages:
+
+- **Speed**: 10-100x faster than pip for package installation
+- **Reliability**: Better dependency resolution and conflict detection
+- **Modern**: Native support for pyproject.toml and modern Python standards
+- **Compatibility**: Drop-in replacement for pip with better performance
+- **Lock Files**: Deterministic builds with automatic lock file generation
 
 ## Project Structure
 
@@ -29,7 +42,8 @@ ai-bot/
 ├── bot.py                 # Main bot application
 ├── config.py             # Configuration management
 ├── llm_providers.py      # LLM provider implementations
-├── requirements.txt      # Python dependencies
+├── pyproject.toml        # Modern Python project config (uv)
+├── requirements.txt      # Legacy Python dependencies (fallback)
 ├── Dockerfile           # Container configuration
 ├── config/              # Configuration files
 └── README.md           # This file
@@ -140,17 +154,32 @@ response = anthropic_client.messages.create(
 
 ### Docker Deployment
 
-The bot runs in a Docker container with health checks:
+The bot runs in a Docker container with health checks and uv for fast dependency installation:
 
 ```dockerfile
 FROM python:3.11-slim
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+
+# Install uv package manager
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# Copy dependency files
+COPY pyproject.toml uv.lock* requirements.txt ./
+
+# Install dependencies with uv (much faster than pip)
+RUN uv pip install --system --no-cache .
+
 COPY . .
 EXPOSE 8080
 CMD ["python", "bot.py"]
 ```
+
+**Benefits of uv in Docker:**
+- Significantly faster image builds (10-100x speedup)
+- Better caching of dependency layers
+- More reliable dependency resolution
+- Smaller final image size
 
 ### Application Service Registration
 
@@ -193,28 +222,104 @@ Bot: Why don't scientists trust atoms? Because they make up everything! 😄
 
 ## Development
 
+### Prerequisites
+
+- **Python 3.11+**: Required for modern async features
+- **uv**: Fast Python package manager (install from https://astral.sh/uv/)
+
 ### Local Development
 
-1. **Install Dependencies**:
+1. **Install uv** (if not already installed):
    ```bash
-   pip install -r requirements.txt
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-2. **Set Environment Variables**:
+2. **Install Dependencies**:
+   ```bash
+   # Using pyproject.toml (recommended)
+   uv pip install -e .
+   
+   # Or using requirements.txt
+   uv pip install -r requirements.txt
+   
+   # Install with development dependencies
+   uv pip install -e ".[dev]"
+   ```
+
+3. **Set Environment Variables**:
    ```bash
    export MATRIX_SERVER_URL=http://localhost:8008
    export MATRIX_USERNAME=@aibot:localhost
    export OPENAI_API_KEY=your_key_here
    ```
 
-3. **Run Bot**:
+4. **Run Bot**:
    ```bash
    python bot.py
    ```
 
+### Development with uv
+
+#### Quick Start with Dev Script
+
+We provide a convenient development script that handles all uv operations:
+
+```bash
+# Set up complete development environment
+./dev.sh setup
+
+# Run tests
+./dev.sh test
+
+# Format and lint code
+./dev.sh format
+./dev.sh lint
+
+# Run the bot locally
+./dev.sh run
+
+# Clean up
+./dev.sh clean
+```
+
+#### Manual Development Commands
+
+```bash
+# Create virtual environment
+uv venv
+
+# Activate virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install in development mode
+uv pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Format code
+black .
+isort .
+
+# Type checking
+mypy .
+
+# Lint code
+flake8 .
+```
+
 ### Testing
 
 ```bash
+# Install test dependencies
+uv pip install -e ".[test]"
+
+# Run unit tests
+pytest
+
+# Run tests with coverage
+pytest --cov=. --cov-report=html
+
 # Test configuration
 python -c "from config import BotConfig; print(BotConfig())"
 

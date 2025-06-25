@@ -6,7 +6,7 @@ A comprehensive web-based messaging platform built on Matrix.org protocol with S
 
 - **Matrix Homeserver**: Synapse-based Matrix server for secure, decentralized messaging
 - **Web Client**: Modern React-based web interface for messaging
-- **AI Bot**: Intelligent bot powered by LLM that can participate in conversations
+- **AI Bot**: Intelligent bot powered by LLM with fast uv package management
 - **Real-time Communication**: WebSocket-based real-time messaging
 - **End-to-End Encryption**: Secure messaging with Matrix's E2EE capabilities
 - **Room Management**: Create and manage chat rooms
