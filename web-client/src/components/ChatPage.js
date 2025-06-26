@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useMatrix } from '../App';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -23,6 +23,7 @@ const ChatPage = () => {
   const [newRoomName, setNewRoomName] = useState('');
   const [newRoomTopic, setNewRoomTopic] = useState('');
   const [newRoomType, setNewRoomType] = useState('private');
+  const [includeAIBot, setIncludeAIBot] = useState(true);
   const [inviteUsername, setInviteUsername] = useState('');
   const [publicRooms, setPublicRooms] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,25 +32,65 @@ const ChatPage = () => {
   const messagesEndRef = useRef(null);
   const workingClientRef = useRef(null);
 
+  // AI Bot configuration
+  const AI_BOT_USERNAME = '@aibot:localhost';
+
   // Helper function to get the working Matrix client
   const getWorkingClient = () => {
     return workingClientRef.current || client;
   };
 
   // Helper function to determine if a room is public
-  const isPublicRoom = (room) => {
+  const isPublicRoom = useCallback((room) => {
     const joinRule = room.getJoinRule();
     return joinRule === 'public';
-  };
+  }, []);
 
   // Helper function to get room type for display
-  const getRoomType = (room) => {
+  const getRoomType = useCallback((room) => {
     if (isPublicRoom(room)) return 'public';
     return 'private';
+  }, [isPublicRoom]);
+
+  // Helper function to check if AI bot is in a room
+  const hasAIBot = (room) => {
+    if (!room) return false;
+    const members = room.getJoinedMembers();
+    return members.some(member => member.userId === AI_BOT_USERNAME);
+  };
+
+  // Helper function to invite AI bot to a room
+  const inviteAIBot = async (roomId) => {
+    try {
+      const workingClient = getWorkingClient();
+      if (!workingClient) {
+        throw new Error('No Matrix client available');
+      }
+      
+      await workingClient.invite(roomId, AI_BOT_USERNAME);
+      toast.success('AI Bot invited to the session!');
+      
+      // Update room list to reflect changes
+      setTimeout(() => {
+        const allRooms = workingClient.getRooms();
+        const { roomsList, publicRoomsList, privateRoomsList } = categorizeRooms(allRooms);
+        setRooms(roomsList);
+        setJoinedPublicRooms(publicRoomsList);
+        setJoinedPrivateRooms(privateRoomsList);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Failed to invite AI bot:', error);
+      if (error.message.includes('already in the room')) {
+        toast.info('AI Bot is already in this session');
+      } else {
+        toast.error('Failed to invite AI Bot: ' + (error.message || 'Unknown error'));
+      }
+    }
   };
 
   // Enhanced room categorization
-  const categorizeRooms = (allRooms) => {
+  const categorizeRooms = useCallback((allRooms) => {
     const roomsList = [];
     const publicRoomsList = [];
     const privateRoomsList = [];
@@ -65,6 +106,10 @@ const ChatPage = () => {
         case 'private':
           privateRoomsList.push(room);
           roomsList.push(room); // Also add to general rooms list
+          break;
+        default:
+          // Unknown room type, add to general rooms list
+          roomsList.push(room);
           break;
       }
     });
@@ -83,7 +128,7 @@ const ChatPage = () => {
     privateRoomsList.sort(sortByActivity);
     
     return { roomsList, publicRoomsList, privateRoomsList };
-  };
+  }, [getRoomType]); // Include getRoomType dependency
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -275,7 +320,7 @@ const ChatPage = () => {
         workingClient.removeListener('Room', onRoomMembershipUpdate);
       }
     };
-  }, [client, currentRoom, user]);
+  }, [client, currentRoom, user, categorizeRooms]);
 
   // Load messages for a room
   const loadMessages = (room) => {
@@ -337,6 +382,7 @@ const ChatPage = () => {
     setNewRoomName('');
     setNewRoomTopic('');
     setNewRoomType('private');
+    setIncludeAIBot(true); // Default to including AI bot for public sessions
   };
 
   const createRoom = async () => {
@@ -365,9 +411,21 @@ const ChatPage = () => {
       
       const createResponse = await workingClient.createRoom(roomConfig);
       
+      // Invite AI bot if requested and it's a public room
+      if (newRoomType === 'public' && includeAIBot) {
+        try {
+          await inviteAIBot(createResponse.room_id);
+        } catch (error) {
+          console.warn('Failed to invite AI bot to new room:', error);
+          // Don't fail the room creation if AI bot invitation fails
+        }
+      }
+      
       setShowNewRoomModal(false);
       setNewRoomName('');
       setNewRoomTopic('');
+      setNewRoomType('private');
+      setIncludeAIBot(true);
       toast.success('Session created successfully!');
       
       // The session list will be updated automatically via the Room event listener
@@ -691,6 +749,9 @@ const ChatPage = () => {
                             <div className="item-name">
                               {room.name || 'Unnamed Public Session'}
                               <span className="room-type-badge public">Public</span>
+                              {hasAIBot(room) && (
+                                <span className="ai-bot-badge" title="AI Bot is present">🤖</span>
+                              )}
                             </div>
                             <div className="item-last-message">
                               {lastMessage}
@@ -700,6 +761,19 @@ const ChatPage = () => {
                             <div className="member-count">
                               👥 {room.getJoinedMembers().length}
                             </div>
+                            {!hasAIBot(room) && isPublicRoom(room) && (
+                              <button
+                                className="invite-ai-bot-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  inviteAIBot(room.roomId);
+                                }}
+                                title="Invite AI Bot to this session"
+                                disabled={isLoading}
+                              >
+                                🤖+
+                              </button>
+                            )}
                             <button
                               className="delete-session-btn"
                               onClick={(e) => {
@@ -745,6 +819,9 @@ const ChatPage = () => {
                             <div className="item-name">
                               {room.name || 'Unnamed Private Session'}
                               <span className="room-type-badge private">Private</span>
+                              {hasAIBot(room) && (
+                                <span className="ai-bot-badge" title="AI Bot is present">🤖</span>
+                              )}
                             </div>
                             <div className="item-last-message">
                               {lastMessage}
@@ -1062,6 +1139,8 @@ const ChatPage = () => {
                   setShowNewRoomModal(false);
                   setNewRoomName('');
                   setNewRoomTopic('');
+                  setNewRoomType('private');
+                  setIncludeAIBot(true);
                 }}
                 title="Close"
               >
@@ -1147,6 +1226,24 @@ const ChatPage = () => {
                   }
                 </small>
               </div>
+
+              {/* AI Bot inclusion option for public rooms */}
+              {newRoomType === 'public' && (
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={includeAIBot}
+                      onChange={(e) => setIncludeAIBot(e.target.checked)}
+                      style={{ margin: 0 }}
+                    />
+                    <span>🤖 Include AI Bot</span>
+                  </label>
+                  <small className="form-help">
+                    The AI Bot will be automatically invited to join this public session and can assist with conversations
+                  </small>
+                </div>
+              )}
             </div>
 
             <div className="modal-footer">
@@ -1156,6 +1253,8 @@ const ChatPage = () => {
                   setShowNewRoomModal(false);
                   setNewRoomName('');
                   setNewRoomTopic('');
+                  setNewRoomType('private');
+                  setIncludeAIBot(true);
                 }}
                 disabled={isLoading}
               >
