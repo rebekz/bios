@@ -1,0 +1,14 @@
+# AI Bot Application Service Registration
+id: ai-bot
+url: http://ai-bot:8080
+as_token: "Js8njgOFVtOmkBhUa6Ng1AcTQEiTJpO-EpTcL71UfOo"
+hs_token: "IX7CaCz6xZtc9aZAFM5ywCT8wZFnDr0BlfPqzq5AgeU"
+sender_localpart: aibot
+rate_limited: false
+
+namespaces:
+  users:
+    - exclusive: true
+      regex: "@aibot:localhost"
+  aliases: []
+  rooms: []

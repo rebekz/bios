@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICD Code Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #fafafa;
+        }
+
+        .file-input-display:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .file-input-display.drag-over {
+            border-color: #667eea;
+            background: #f0f4ff;
+            transform: scale(1.02);
+        }
+
+        .file-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .file-text {
+            color: #666;
+        }
+
+        .file-selected {
+            background: #e8f5e8;
+            border-color: #28a745;
+        }
+
+        select, textarea, input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+            font-family: inherit;
+        }
+
+        select:focus, textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .allowed-types {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .allowed-types h4 {
+            color: #495057;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .type-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .type-tag {
+            background: #e9ecef;
+            color: #495057;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-rooms {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 ICD Generator</h1>
+            <p>Upload Medical Record and get ICD codes</p>
+        </div>
+
+        <div class="status-message" id="statusMessage"></div>
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner"></div>
+            <p>Uploading Medical Record</p>
+        </div>
+
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">Select Document</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="file" name="file" class="file-input" required>
+                    <div class="file-input-display" id="fileDisplay">
+                        <div>
+                            <div class="file-icon">📁</div>
+                            <div class="file-text">
+                                <strong>Click to browse</strong> or drag and drop your document
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="allowed-types">
+                    <h4>Allowed file types:</h4>
+                    <div class="type-list">
+                        {% for ext in allowed_extensions %}
+                        <span class="type-tag">{{ ext }}</span>
+                        {% endfor %}
+                    </div>
+                    <small style="color: #666; margin-top: 8px; display: block;">Maximum file size: 10MB</small>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="message">Custom Message (Optional)</label>
+                <textarea id="message" name="message" placeholder="Enter a custom message to send with the document notification..."></textarea>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn">
+                📤 Upload Document
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <button onclick="window.close()" style="background: none; border: none; color: #667eea; text-decoration: none; font-weight: 500; cursor: pointer; font-size: inherit; padding: 0;">
+                ✕ Close Tab
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // File input handling
+        const fileInput = document.getElementById('file');
+        const fileDisplay = document.getElementById('fileDisplay');
+        const form = document.getElementById('uploadForm');
+        const statusMessage = document.getElementById('statusMessage');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // File drag and drop
+        fileDisplay.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileDisplay.classList.add('drag-over');
+        });
+
+        fileDisplay.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            fileDisplay.classList.remove('drag-over');
+        });
+
+        fileDisplay.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileDisplay.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                updateFileDisplay(files[0]);
+            }
+        });
+
+        // File selection
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                updateFileDisplay(e.target.files[0]);
+            }
+        });
+
+        function updateFileDisplay(file) {
+            const fileIcon = fileDisplay.querySelector('.file-icon');
+            const fileText = fileDisplay.querySelector('.file-text');
+            
+            fileIcon.textContent = '✅';
+            fileText.innerHTML = `<strong>${file.name}</strong><br><small>${(file.size / (1024*1024)).toFixed(2)} MB</small>`;
+            fileDisplay.classList.add('file-selected');
+        }
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            
+            // Show loading
+            loadingSpinner.style.display = 'block';
+            submitBtn.disabled = true;
+            statusMessage.style.display = 'none';
+            
+            try {
+                // Use current URL path for upload
+                const response = await fetch(window.location.pathname, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    showStatus('success', result.message);
+                    form.reset();
+                    fileDisplay.classList.remove('file-selected');
+                    fileDisplay.querySelector('.file-icon').textContent = '📁';
+                    fileDisplay.querySelector('.file-text').innerHTML = '<strong>Click to browse</strong> or drag and drop your document';
+                } else {
+                    showStatus('error', result.detail || result.message || 'Upload failed');
+                }
+            } catch (error) {
+                showStatus('error', 'Network error: ' + error.message);
+            } finally {
+                loadingSpinner.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+
+        function showStatus(type, message) {
+            statusMessage.className = `status-message status-${type}`;
+            statusMessage.textContent = message;
+            statusMessage.style.display = 'block';
+            
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusMessage.style.display = 'none';
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,143 @@
+# Matrix Synapse Homeserver Configuration
+
+# Server configuration
+server_name: "localhost"
+pid_file: /data/homeserver.pid
+public_baseurl: "http://localhost:8008/"
+serve_server_wellknown: true
+
+# Listeners
+listeners:
+  - port: 8008
+    tls: false
+    type: http
+    x_forwarded: true
+    bind_addresses: ['0.0.0.0']
+    resources:
+      - names: [client, federation]
+        compress: false
+
+# Database configuration (PostgreSQL)
+database:
+  name: psycopg2
+  args:
+    user: synapse
+    password: synapse_password
+    database: synapse
+    host: postgres
+    port: 5432
+    cp_min: 5
+    cp_max: 10
+
+# Logging
+log_config: "/data/log.config"
+
+# Media store
+media_store_path: "/data/media_store"
+max_upload_size: 50M
+max_image_pixels: 32M
+
+# Registration and login
+enable_registration: true
+enable_registration_without_verification: true
+registration_shared_secret: "JTuYkZYUD44J2WdV1qkK17v7ELcgv2qoS3YWFck8PzI"
+bcrypt_rounds: 12
+allow_guest_access: false
+
+# Disable captcha and other auth requirements for simpler registration
+enable_registration_captcha: false
+recaptcha_public_key: ""
+recaptcha_private_key: ""
+
+# Allow registration without requiring additional authentication
+registrations_require_3pid: []
+
+# Security
+macaroon_secret_key: "STenWRjDh-06Nj-3KrIYcrVJVVER9WBTqEVhsWXce7M"
+form_secret: "7pdg50dvmLg6qrw5FE3l7Ii--ANdlWaFQ02q4ChGLrA"
+
+# Federation
+federation_domain_whitelist:
+  - localhost
+
+# URL previews
+url_preview_enabled: true
+url_preview_ip_range_blacklist:
+  - '127.0.0.0/8'
+  - '10.0.0.0/8'
+  - '172.16.0.0/12'
+  - '192.168.0.0/16'
+  - '100.64.0.0/10'
+  - '169.254.0.0/16'
+  - '::1/128'
+  - 'fe80::/64'
+  - 'fc00::/7'
+
+# Metrics and reporting
+enable_metrics: false
+report_stats: false
+
+# Room settings
+encryption_enabled_by_default_for_room_type: off
+default_room_version: "9"
+
+# Public room directory settings
+enable_room_list_search: true
+alias_creation_rules:
+  - user_id: "*"
+    alias: "*"
+    action: allow
+
+# Room directory settings
+room_list_publication_rules:
+  - user_id: "*"
+    alias: "*"
+    room_id: "*"
+    action: allow
+
+# User settings
+user_directory:
+    enabled: true
+    search_all_users: true
+
+# Admin contact
+admin_contact: 'mailto:admin@localhost'
+
+# App services (for bots) - temporarily disabled
+# app_service_config_files:
+#   - /data/ai-bot-registration.yaml
+
+# Rate limiting
+rc_message:
+  per_second: 0.2
+  burst_count: 10
+
+rc_registration:
+  per_second: 0.17
+  burst_count: 3
+
+rc_login:
+  address:
+    per_second: 0.17
+    burst_count: 3
+  account:
+    per_second: 0.17
+    burst_count: 3
+  failed_attempts:
+    per_second: 0.17
+    burst_count: 3
+
+# Push notifications
+push:
+  include_content: true
+
+# Presence
+use_presence: true
+
+# Caching
+caches:
+  global_factor: 0.5
+
+# Trusted key servers
+trusted_key_servers:
+  - server_name: "matrix.org"

@@ -1,0 +1,81 @@
+/* Additional styles for the document uploader */
+
+.upload-progress {
+    width: 100%;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0;
+    display: none;
+}
+
+.upload-progress-bar {
+    height: 6px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.file-preview {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    display: none;
+}
+
+.file-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: between;
+    margin-bottom: 10px;
+}
+
+.file-preview-icon {
+    font-size: 1.5rem;
+    margin-right: 10px;
+}
+
+.file-preview-info {
+    flex: 1;
+}
+
+.file-preview-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.file-preview-size {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.remove-file {
+    background: none;
+    border: none;
+    color: #dc3545;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+.remove-file:hover {
+    background: #f8d7da;
+}
+
+@media (max-width: 768px) {
+    .container {
+        margin: 10px;
+        padding: 20px;
+    }
+    
+    .header h1 {
+        font-size: 2rem;
+    }
+    
+    .file-input-display {
+        padding: 30px 15px;
+    }
+} 
