@@ -1,0 +1,16 @@
+id: whatsapp
+url: http://whatsapp-bridge:29318
+as_token: wapbridge_as_token_2024
+hs_token: wapbridge_hs_token_2024
+sender_localpart: whatsappbot
+rate_limited: false
+namespaces:
+  users:
+  - exclusive: true
+    regex: '@whatsapp_.*:localhost'
+  - exclusive: true
+    regex: '@whatsappbot:localhost'
+  aliases:
+  - exclusive: true
+    regex: '#whatsapp_.*:localhost'
+  rooms: []

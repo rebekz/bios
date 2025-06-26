@@ -31,6 +31,7 @@ services:
       - ./synapse/homeserver.yaml:/data/homeserver.yaml:ro
       - ./synapse/log.config:/data/log.config:ro
       - ./synapse/ai-bot-registration.yaml:/data/ai-bot-registration.yaml:ro
+      - ./synapse/whatsapp-bridge-registration.yaml:/data/whatsapp-bridge-registration.yaml:ro
     environment:
       - SYNAPSE_SERVER_NAME=localhost
       - SYNAPSE_REPORT_STATS=no
@@ -119,10 +120,33 @@ services:
     volumes:
       - ./document-uploader/uploads:/app/uploads
     restart: unless-stopped
+
+  # WhatsApp Bridge
+  whatsapp-bridge:
+    build:
+      context: ./whatsapp-bridge
+      dockerfile: Dockerfile
+    ports:
+      - "29318:29318"
+    environment:
+      - MATRIX_SERVER_URL=http://synapse:8008
+    depends_on:
+      - synapse
+      - postgres
+    networks:
+      - matrix_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Enable access to host services
+    volumes:
+      - whatsapp_data:/data
+      - ./whatsapp-bridge/config.yaml:/data/config.yaml:ro
+      - ./whatsapp-bridge/registration.yaml:/data/registration.yaml:ro
+    restart: unless-stopped
   
 volumes:
   postgres_data:
   redis_data:
+  whatsapp_data:
 
 networks:
   matrix_network:

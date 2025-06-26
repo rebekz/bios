@@ -103,9 +103,10 @@ user_directory:
 # Admin contact
 admin_contact: 'mailto:admin@localhost'
 
-# App services (for bots) - temporarily disabled
-# app_service_config_files:
-#   - /data/ai-bot-registration.yaml
+# App services (for bots)
+app_service_config_files:
+  - /data/ai-bot-registration.yaml
+  - /data/whatsapp-bridge-registration.yaml
 
 # Rate limiting
 rc_message:
