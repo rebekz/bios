@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Uploader - Select Room</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .room-list {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .room-item {
+            display: block;
+            text-decoration: none;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            color: #333;
+        }
+
+        .room-item:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.15);
+        }
+
+        .room-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .room-id {
+            font-size: 0.9rem;
+            color: #666;
+            font-family: 'Courier New', monospace;
+        }
+
+        .no-rooms {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .instructions {
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .instructions h3 {
+            color: #0c5460;
+            margin-bottom: 10px;
+        }
+
+        .instructions p {
+            color: #0c5460;
+            line-height: 1.5;
+        }
+
+        .url-example {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #495057;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Document Uploader</h1>
+            <p>Select a Matrix room to upload documents</p>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 How to Use</h3>
+            <p>
+                Click on a room below to access the upload page for that specific room. 
+                You can also bookmark or share direct upload links for easy access.
+            </p>
+            <div class="url-example">
+                Direct URL format: /upload/{room_id}
+            </div>
+        </div>
+
+        {% if rooms %}
+        <div class="room-list">
+            {% for room in rooms %}
+            <a href="/upload/{{ room | urlencode }}" class="room-item">
+                <div class="room-name">💬 {{ room.split(':')[0] | replace('!', '') | replace('#', '') | title }}</div>
+                <div class="room-id">{{ room }}</div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-rooms">
+            <h3>⚠️ No Matrix Rooms Available</h3>
+            <p>The AI bot hasn't joined any Matrix rooms yet. Please ensure the bot is running and has joined some rooms before using the document uploader.</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html> 

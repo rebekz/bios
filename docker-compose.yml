@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL database for Synapse
   postgres:
@@ -11,8 +9,12 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"  # Expose PostgreSQL port for external access
     networks:
       - matrix_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Enable access to host services
     restart: unless-stopped
 
   # Matrix Synapse homeserver
@@ -23,9 +25,12 @@ services:
     ports:
       - "8008:8008"
       - "8448:8448"
+      - "9000:9000"  # Additional port for metrics/debugging
     volumes:
       - ./synapse/data:/data
-      - ./synapse/config:/config
+      - ./synapse/homeserver.yaml:/data/homeserver.yaml:ro
+      - ./synapse/log.config:/data/log.config:ro
+      - ./synapse/ai-bot-registration.yaml:/data/ai-bot-registration.yaml:ro
     environment:
       - SYNAPSE_SERVER_NAME=localhost
       - SYNAPSE_REPORT_STATS=no
@@ -33,6 +38,8 @@ services:
       - postgres
     networks:
       - matrix_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Enable access to host services
     restart: unless-stopped
 
   # Web client (React)
@@ -48,6 +55,8 @@ services:
       - synapse
     networks:
       - matrix_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Enable access to host services
     restart: unless-stopped
 
   # AI Bot
@@ -65,19 +74,52 @@ services:
       - synapse
     networks:
       - matrix_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Enable access to host services
+    # Enable access to external APIs and host network resources
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     restart: unless-stopped
     volumes:
       - ./ai-bot/config:/app/config
+  
 
   # Redis for caching (optional but recommended)
   redis:
     image: redis:7-alpine
     volumes:
       - redis_data:/data
+    ports:
+      - "6379:6379"  # Expose Redis port for external access
     networks:
       - matrix_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Enable access to host services
     restart: unless-stopped
 
+  # Document Uploader
+  document-uploader:
+    build:
+      context: ./document-uploader
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - MATRIX_SERVER_URL=http://synapse:8008
+      - MATRIX_USERNAME=@aibot:localhost
+      - MATRIX_PASSWORD=aibot_password
+    depends_on:
+      - synapse
+      - ai-bot
+    networks:
+      - matrix_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Enable access to host services
+    volumes:
+      - ./document-uploader/uploads:/app/uploads
+    restart: unless-stopped
+  
 volumes:
   postgres_data:
   redis_data:
@@ -85,3 +127,9 @@ volumes:
 networks:
   matrix_network:
     driver: bridge
+    # Enable external connectivity
+    external: false
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1

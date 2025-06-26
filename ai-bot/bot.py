@@ -102,6 +102,62 @@ class MatrixAIBot:
             logger.error(f"Error checking if room is DM: {e}")
             return False
     
+    async def auto_join_public_rooms(self):
+        """Automatically join all public rooms on the server"""
+        try:
+            logger.info("Discovering and joining public rooms...")
+            
+            # Get list of public rooms
+            from nio import RoomListResponse
+            response = await self.client.room_list(limit=100)
+            
+            if isinstance(response, RoomListResponse):
+                public_room_count = 0
+                joined_room_count = 0
+                
+                for room in response.rooms:
+                    room_id = room.room_id
+                    
+                    # Check if room is public (not invite-only)
+                    if room.join_rule == "public":
+                        public_room_count += 1
+                        
+                        # Check if we're already in the room
+                        if room_id not in self.client.rooms:
+                            try:
+                                join_response = await self.client.join(room_id)
+                                if hasattr(join_response, 'room_id'):
+                                    joined_room_count += 1
+                                    logger.info(f"Successfully joined public room: {room.name or room_id}")
+                                    
+                                    # Send a greeting message after joining
+                                    await asyncio.sleep(1)  # Small delay to ensure join is processed
+                                    await self.send_message(
+                                        room_id,
+                                        "🤖 Hello! I'm the AI Bot. I've automatically joined this public room. "
+                                        "Feel free to mention me to interact!"
+                                    )
+                                else:
+                                    logger.warning(f"Failed to join room {room.name or room_id}: {join_response}")
+                            except Exception as e:
+                                logger.error(f"Error joining room {room.name or room_id}: {e}")
+                        else:
+                            logger.debug(f"Already in room: {room.name or room_id}")
+                
+                logger.info(f"Found {public_room_count} public rooms, joined {joined_room_count} new rooms")
+                
+                # If there's a next batch, continue fetching
+                if response.next_batch:
+                    # For simplicity, we'll limit to first batch for now
+                    # In production, you might want to paginate through all rooms
+                    pass
+                    
+            else:
+                logger.error(f"Failed to get room list: {response}")
+                
+        except Exception as e:
+            logger.error(f"Error in auto-join public rooms: {e}")
+    
     async def respond_to_message(self, room_id: str, sender: str, message: str):
         """Generate and send AI response to a message"""
         try:
@@ -167,28 +223,27 @@ class MatrixAIBot:
             logger.error(f"Error sending message: {e}")
     
     async def setup_matrix_client(self):
-        """Setup and login Matrix client"""
+        """Setup Matrix client with application service authentication"""
         try:
             self.client = AsyncClient(
                 homeserver=self.config.matrix_server_url,
                 user=self.config.matrix_username
             )
             
-            # Login
-            login_response = await self.client.login(
-                password=self.config.matrix_password
-            )
+            # Set access token for application service authentication
+            self.client.access_token = self.config.as_token
+            self.client.user_id = self.config.matrix_username
             
-            if isinstance(login_response, LoginResponse):
-                logger.info(f"Successfully logged in as {self.config.matrix_username}")
-                
-                # Set up event callbacks
-                self.client.add_event_callback(self.message_callback, RoomMessageText)
-                
-                # Start syncing
-                await self.client.sync_forever(timeout=30000)
-            else:
-                logger.error(f"Failed to login: {login_response}")
+            logger.info(f"Setup Matrix client as application service: {self.config.matrix_username}")
+            
+            # Set up event callbacks
+            self.client.add_event_callback(self.message_callback, RoomMessageText)
+            
+            # Auto-join public rooms on startup
+            await self.auto_join_public_rooms()
+            
+            # Start syncing
+            await self.client.sync_forever(timeout=30000)
                 
         except Exception as e:
             logger.error(f"Error setting up Matrix client: {e}")

@@ -53,8 +53,8 @@ const LoginPage = () => {
           </h1>
           <p className="login-subtitle">
             {isLoginMode 
-              ? 'Sign in to your Matrix account' 
-              : 'Join the Matrix messaging platform'
+              ? 'Sign in to your MTA account' 
+              : 'Join the MTA BIOS platform'
             }
           </p>
         </div>

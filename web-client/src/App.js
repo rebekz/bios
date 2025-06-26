@@ -59,17 +59,24 @@ const MatrixProvider = ({ children }) => {
       localStorage.setItem('matrix_user_id', response.user_id);
       localStorage.setItem('matrix_device_id', response.device_id);
       
-      // Update client with credentials
-      matrixClient.setCredentials({
-        userId: response.user_id,
+      // Create a new client with the credentials
+      const authenticatedClient = sdk.createClient({
+        baseUrl: 'http://localhost:8008',
         accessToken: response.access_token,
+        userId: response.user_id,
         deviceId: response.device_id,
+        store: new sdk.MemoryStore(),
+        scheduler: new sdk.MatrixScheduler(),
       });
 
       // Start client
-      await matrixClient.startClient();
+      await authenticatedClient.startClient();
       
-      setClient(matrixClient);
+      // Debug: expose client globally
+      window.matrixClient = authenticatedClient;
+      console.warn('🔥 Matrix client set in login, rooms:', authenticatedClient.getRooms().length);
+      
+      setClient(authenticatedClient);
       setUser(response);
       setIsLoggedIn(true);
       
@@ -88,19 +95,71 @@ const MatrixProvider = ({ children }) => {
   const register = async (username, password) => {
     try {
       setIsLoading(true);
-      const matrixClient = await initializeClient();
       
-      if (!matrixClient) {
-        throw new Error('Failed to initialize client');
-      }
+      // Use direct HTTP requests for registration since Matrix SDK has issues with auth flows
+      const baseUrl = 'http://localhost:8008';
+      
+      // First request to get authentication flows
+      const firstResponse = await fetch(`${baseUrl}/_matrix/client/v3/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: username,
+          password: password,
+        }),
+      });
 
-      const response = await matrixClient.register(username, password);
+      const firstData = await firstResponse.json();
       
-      // Auto-login after registration
-      return await login(username, password);
+      if (firstResponse.ok && firstData.user_id) {
+        // Registration succeeded without auth
+        return await login(username, password);
+      }
+      
+      // Handle authentication flow
+      if (firstData.flows && firstData.session) {
+        // Find dummy auth flow
+        const dummyFlow = firstData.flows.find(flow => 
+          flow.stages && flow.stages.includes('m.login.dummy')
+        );
+        
+        if (dummyFlow) {
+          // Register with dummy auth
+          const authResponse = await fetch(`${baseUrl}/_matrix/client/v3/register`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              username: username,
+              password: password,
+              auth: {
+                type: 'm.login.dummy',
+                session: firstData.session
+              }
+            }),
+          });
+          
+          const authData = await authResponse.json();
+          
+          if (authResponse.ok && authData.user_id) {
+            // Registration successful, now login
+            return await login(username, password);
+          } else {
+            throw new Error(authData.error || 'Registration failed');
+          }
+        } else {
+          throw new Error('No supported authentication flow found');
+        }
+      } else {
+        throw new Error(firstData.error || 'Registration failed');
+      }
     } catch (error) {
       console.error('Registration failed:', error);
-      toast.error(error.message || 'Registration failed');
+      const errorMessage = error.message || 'Registration failed';
+      toast.error(errorMessage);
       return false;
     } finally {
       setIsLoading(false);
@@ -133,35 +192,71 @@ const MatrixProvider = ({ children }) => {
 
   // Check for existing session on app load
   useEffect(() => {
+    console.warn('🔥 App.js useEffect starting...');
+    
     const checkExistingSession = async () => {
       const accessToken = localStorage.getItem('matrix_access_token');
       const userId = localStorage.getItem('matrix_user_id');
       const deviceId = localStorage.getItem('matrix_device_id');
 
+      console.warn('🔥 Checking credentials:', {
+        hasToken: !!accessToken,
+        userId: userId,
+        hasDeviceId: !!deviceId
+      });
+
       if (accessToken && userId && deviceId) {
         try {
-          const matrixClient = await initializeClient();
+          console.warn('🔥 Creating Matrix client...');
           
-          if (matrixClient) {
-            matrixClient.setCredentials({
-              userId: userId,
-              accessToken: accessToken,
-              deviceId: deviceId,
-            });
+          // Create client with stored credentials
+          const authenticatedClient = sdk.createClient({
+            baseUrl: 'http://localhost:8008',
+            accessToken: accessToken,
+            userId: userId,
+            deviceId: deviceId,
+            store: new sdk.MemoryStore(),
+            scheduler: new sdk.MatrixScheduler(),
+          });
 
-            await matrixClient.startClient();
+          console.warn('🔥 Starting Matrix client...');
+          await authenticatedClient.startClient();
+          
+          // Wait for initial sync
+          await new Promise((resolve) => {
+            const onSync = (state) => {
+              console.warn('🔥 Sync state:', state);
+              if (state === 'PREPARED') {
+                authenticatedClient.removeListener('sync', onSync);
+                resolve();
+              }
+            };
             
-            setClient(matrixClient);
-            setUser({ user_id: userId, device_id: deviceId });
-            setIsLoggedIn(true);
-          }
+            if (authenticatedClient.getSyncState() === 'PREPARED') {
+              resolve();
+            } else {
+              authenticatedClient.on('sync', onSync);
+            }
+          });
+          
+          // Debug: expose client globally
+          window.matrixClient = authenticatedClient;
+          console.warn('🔥 Matrix client set in App.js, rooms:', authenticatedClient.getRooms().length);
+          
+          setClient(authenticatedClient);
+          setUser({ user_id: userId, device_id: deviceId });
+          setIsLoggedIn(true);
+          
+          console.warn('🔥 App.js session restoration complete');
         } catch (error) {
-          console.error('Failed to restore session:', error);
+          console.warn('❌ Failed to restore session:', error);
           // Clear invalid credentials
           localStorage.removeItem('matrix_access_token');
           localStorage.removeItem('matrix_user_id');
           localStorage.removeItem('matrix_device_id');
         }
+      } else {
+        console.warn('🔥 No stored credentials found');
       }
       
       setIsLoading(false);

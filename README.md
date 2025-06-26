@@ -42,6 +42,7 @@ A comprehensive web-based messaging platform built on Matrix.org protocol with S
 - `synapse/` - Matrix Synapse homeserver configuration
 - `web-client/` - React-based web messaging interface
 - `ai-bot/` - LLM-powered AI bot
+- `document-uploader/` - Application that intergrates with AI bot
 - `docker-compose.yml` - Complete deployment setup
 
 ## Development

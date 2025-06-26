@@ -19,8 +19,8 @@ class BotConfig:
         self.matrix_password = os.getenv('MATRIX_PASSWORD', 'aibot_password')
         
         # Application service configuration
-        self.as_token = os.getenv('AS_TOKEN', 'aibot_application_service_token_here')
-        self.hs_token = os.getenv('HS_TOKEN', 'homeserver_token_for_aibot_here')
+        self.as_token = os.getenv('AS_TOKEN', 'Js8njgOFVtOmkBhUa6Ng1AcTQEiTJpO-EpTcL71UfOo')
+        self.hs_token = os.getenv('HS_TOKEN', 'IX7CaCz6xZtc9aZAFM5ywCT8wZFnDr0BlfPqzq5AgeU')
         
         # LLM provider configuration
         self.openai_api_key = os.getenv('OPENAI_API_KEY')
